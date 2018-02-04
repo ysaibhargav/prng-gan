@@ -18,12 +18,12 @@ class GAN(object):
             g_z, 
             d_x,
             d_g_z):
-        d_loss = tf.reduce_sum(tf.log(d_x)) + \
-                tf.reduce_sum(tf.log(1-d_g_z))
+        d_loss = tf.reduce_sum(tf.log(d_x)) / d_x.shape[0] + \
+                tf.reduce_sum(tf.log(1-d_g_z)) / d_g_z.shape[0]
         d_loss = -d_loss
 
         # non-saturating heuristic
-        g_loss = tf.reduce_sum(tf.log(d_g_z))
+        g_loss = tf.reduce_sum(tf.log(d_g_z)) / d_g_z.shape[0]
         g_loss = -g_loss
 
         return g_loss, d_loss 
@@ -35,7 +35,8 @@ class GAN(object):
             loss_fn):
         self.generator = generator
         self.discriminator = discriminator
-        self.loss_fn = self._vanilla_loss_fn 
+        if loss_fn == "vanilla":
+            self.loss_fn = self._vanilla_loss_fn 
 
 
     def train(self, 
