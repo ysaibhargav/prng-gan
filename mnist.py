@@ -1,3 +1,9 @@
+# Let your BUILD target depend on "//tensorflow/python/debug:debug_py"
+# (You don't need to worry about the BUILD dependency if you are using a pip
+#  install of open-source TensorFlow.)
+from tensorflow.python import debug as tf_debug
+
+
 import tensorflow as tf 
 import numpy as np
 import os
@@ -17,6 +23,7 @@ class _config(object):
         self.z_dims = 100
         self.z_std = 1
         self.num_epochs = 100 
+        self.n_critic = 5
 
 
 def hook_arg_filter(*_args):
@@ -29,9 +36,10 @@ def hook_arg_filter(*_args):
 
 @hook_arg_filter("g_z", "epoch")
 def show_result(batch_res, fname, grid_size=(8, 8), grid_pad=5):
-    save_path = "generated_samples"
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
+    if not os.path.exists("out"):
+        os.mkdir("out")
+    if not os.path.exists(os.path.join("out", "mnist")):
+        os.mkdir(os.path.join("out", "mnist"))
 
     img_height = img_width = 28
     batch_res = 0.5 * batch_res.reshape((batch_res.shape[0], \
@@ -48,7 +56,7 @@ def show_result(batch_res, fname, grid_size=(8, 8), grid_pad=5):
         row = (i // grid_size[0]) * (img_h + grid_pad)
         col = (i % grid_size[1]) * (img_w + grid_pad)
         img_grid[row:row + img_h, col:col + img_w] = img
-    imsave(os.path.join(save_path, "%d.png"%fname), img_grid)
+    imsave(os.path.join("out", "mnist", "%d.png"%fname), img_grid)
 
 
 def generator(z):
@@ -82,9 +90,10 @@ g_optimizer = tf.train.AdamOptimizer(0.0001)
 d_optimizer = g_optimizer 
 
 config = _config()
-hook1 = Hook(real_data.shape[0] // config.x_batch_size, show_result)
+hook1 = Hook(1, show_result)
 
-m = GAN(generator, discriminator, "vanilla")
+m = GAN(generator, discriminator, "wasserstein")
 # TODO: cleanup code by placing session creation inside .train()
 sess = tf.Session()
+#sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 m.train(sess, g_optimizer, d_optimizer, real_data, config, hooks = [hook1])
