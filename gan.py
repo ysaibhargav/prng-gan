@@ -7,8 +7,6 @@ TODO:
         i. parameters
         ii. losses
         iii. gradients
-    2. implement loss functions
-        i. wasserstein
 
 """
 
@@ -56,9 +54,9 @@ class GAN(object):
             x_hat = x + epsilon*(g_z - x)
             d_x_hat = self.discriminator(x_hat)
             grad_d_x_hat = tf.gradients(d_x_hat, [x_hat])[0]
-            _gp = tf.reduce_sum(tf.square(grad_d_x_hat), \
-                    reduction_indices=1)
-            gp = tf.reduce_mean(_gp)
+            slopes = tf.sqrt(tf.reduce_sum(tf.square(grad_d_x_hat), \
+                    reduction_indices=1))
+            gp = tf.reduce_mean((1.-slopes)**2)
 
             d_loss += lmbda * gp
 
@@ -74,16 +72,9 @@ class GAN(object):
         self._loss_fn = loss_fn
 
 
-    def train(self, 
-            sess,
-            g_optimizer, 
-            d_optimizer, 
-            real_data, 
-            config, 
-            g_scope = "generator", 
-            d_scope = "discriminator",
-            hooks = None):
-        # TODO: read about GraphDef and protobuf
+    def _data_handler(self,
+            config,
+            real_data):
         round_sz = config.x_batch_size*(real_data.shape[0]\
                 //config.x_batch_size)
         real_data = real_data[:round_sz]
@@ -96,6 +87,21 @@ class GAN(object):
         x = iterator.get_next()
         z = tf.random_normal([config.z_batch_size, \
                 config.z_dims], stddev = config.z_std)
+
+        return x, z, iterator
+
+
+    def train(self, 
+            sess,
+            g_optimizer, 
+            d_optimizer, 
+            real_data, 
+            config, 
+            g_scope = "generator", 
+            d_scope = "discriminator",
+            hooks = None):
+        # TODO: read about GraphDef and protobuf
+        x, z, iterator = self._data_handler(config, real_data)
 
         if self._loss_fn == "vanilla":
             self.loss_fn = self._vanilla_loss_fn 
