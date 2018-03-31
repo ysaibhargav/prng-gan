@@ -54,8 +54,9 @@ class GAN(object):
             x_hat = x + epsilon*(g_z - x)
             d_x_hat = self.discriminator(x_hat)
             grad_d_x_hat = tf.gradients(d_x_hat, [x_hat])[0]
+            EPS = 1e-8
             slopes = tf.sqrt(tf.reduce_sum(tf.square(grad_d_x_hat), \
-                    reduction_indices=1))
+                    reduction_indices=1)+EPS)
             gp = tf.reduce_mean((1.-slopes)**2)
 
             d_loss += lmbda * gp
